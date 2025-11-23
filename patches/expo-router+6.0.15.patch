@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-router/build/ExpoRoot.js b/node_modules/expo-router/build/ExpoRoot.js
+index 4bef114..7592233 100644
+--- a/node_modules/expo-router/build/ExpoRoot.js
++++ b/node_modules/expo-router/build/ExpoRoot.js
+@@ -78,7 +78,7 @@ function ExpoRoot({ wrapper: ParentWrapper = react_1.Fragment, ...props }) {
+         // SSR support
+         initialMetrics={INITIAL_METRICS}>
+                 {/* Users can override this by adding another StatusBar element anywhere higher in the component tree. */}
+-                {statusbar_1.canOverrideStatusBarBehavior && <AutoStatusBar />}
++                {/* {statusbar_1.canOverrideStatusBarBehavior && <AutoStatusBar />} */}
+                 {children}
+               </react_native_safe_area_context_1.SafeAreaProvider>
+             </LinkPreviewContext_1.LinkPreviewContextProvider>
