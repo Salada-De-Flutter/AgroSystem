@@ -46,9 +46,9 @@ export default function RotaDetalhesScreen() {
   const rotaId = Array.isArray(params.id) ? params.id[0] : params.id;
   const rotaNome = (Array.isArray(params.nome) ? params.nome[0] : params.nome) || 'Rota';
 
-  console.log('🔍 [rota-detalhes] Params recebidos:', params);
-  console.log('🔍 [rota-detalhes] rotaId extraído:', rotaId);
-  console.log('🔍 [rota-detalhes] rotaNome extraído:', rotaNome);
+  console.log('[DEBUG] [rota-detalhes] Params recebidos:', params);
+  console.log('[DEBUG] [rota-detalhes] rotaId extraído:', rotaId);
+  console.log('[DEBUG] [rota-detalhes] rotaNome extraído:', rotaNome);
 
   const [clientes, setClientes] = useState<ClienteProcessado[]>([]);
   const [clientesFiltrados, setClientesFiltrados] = useState<ClienteProcessado[]>([]);
@@ -80,7 +80,7 @@ export default function RotaDetalhesScreen() {
     if (rotaId) {
       carregarVendas();
     } else {
-      console.error('❌ [rota-detalhes] rotaId não foi fornecido!');
+      console.error('[ERROR] [rota-detalhes] rotaId não foi fornecido!');
       setErrorMessage('ID da rota não encontrado');
       setLoading(false);
     }
@@ -96,9 +96,9 @@ export default function RotaDetalhesScreen() {
   );
 
   const carregarVendas = async () => {
-    console.log(`📥 [rota-detalhes] Carregando vendas da rota ${rotaId}...`);
-    console.log(`📥 [rota-detalhes] Tipo do rotaId:`, typeof rotaId);
-    console.log(`📥 [rota-detalhes] rotaId valor:`, rotaId);
+    console.log(`[LOAD] [rota-detalhes] Carregando vendas da rota ${rotaId}...`);
+    console.log(`[LOAD] [rota-detalhes] Tipo do rotaId:`, typeof rotaId);
+    console.log(`[LOAD] [rota-detalhes] rotaId valor:`, rotaId);
     setLoading(true);
     setErrorMessage('');
 
@@ -108,7 +108,7 @@ export default function RotaDetalhesScreen() {
         rota_id: rotaId
       };
       
-      console.log(`📤 [rota-detalhes] Body sendo enviado:`, JSON.stringify(body));
+      console.log(`[SEND] [rota-detalhes] Body sendo enviado:`, JSON.stringify(body));
       
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -118,74 +118,133 @@ export default function RotaDetalhesScreen() {
         body: JSON.stringify(body)
       });
 
-      console.log('📡 [rota-detalhes] Response status:', response.status);
+      console.log('[RESPONSE] [rota-detalhes] Response status:', response.status);
       
-      const data = await response.json();
-      console.log('📦 [rota-detalhes] Response data:', JSON.stringify(data, null, 2));
+      const responseData = await response.json();
+      console.log('[DATA] [rota-detalhes] Response data:', JSON.stringify(responseData, null, 2));
 
-      if (response.ok && Array.isArray(data)) {
-        // Processar dados da API para formato da tela
-        const clientesProcessados: ClienteProcessado[] = data.map((item: any) => {
-          console.log('🔍 [rota-detalhes] Item completo da API:', JSON.stringify(item, null, 2));
-          console.log('🔍 [rota-detalhes] Campos disponíveis:', Object.keys(item));
-          
-          // Tentar todas as variações possíveis do ID do parcelamento
-          const parcelamentoId = item.parcelamentoId || 
-                                 item.parcelamento_id || 
-                                 item.parcelamentoAsaas ||
-                                 item.parcelamento_asaas_id ||
-                                 item.asaasId ||
-                                 item.id;
-          
-          console.log('🔍 [rota-detalhes] parcelamentoId extraído:', parcelamentoId);
-          
-          return {
-            ...item,
-            expandido: false,
-            parcelamentoId: parcelamentoId,
-            clienteId: item.clienteId || item.cliente_id
-          };
-        });
-
-        // Calcular estatísticas - Contar CLIENTES por status e VALORES
-        let emDia = 0, inadimplente = 0, aVencer = 0;
-        let valRecebido = 0, valVencido = 0, valAVencer = 0;
+      // Verificar se a resposta é OK
+      if (response.ok) {
+        let clientesArray: any[] = [];
         
-        clientesProcessados.forEach(cliente => {
-          // Somar valores
-          valRecebido += cliente.parcelasPagas.valor;
-          valVencido += cliente.parcelasVencidas.valor;
-          valAVencer += cliente.parcelasAVencer.valor;
+        // Nova API otimizada retorna { success, data, pagination, performance }
+        if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+          console.log('[INFO] [rota-detalhes] API otimizada detectada');
+          clientesArray = responseData.data;
           
-          // Lógica correta: prioridade Inadimplente > A Vencer > Em Dia
-          if (cliente.parcelasVencidas.quantidade > 0) {
-            inadimplente++; // Tem parcela vencida
-          } else if (cliente.parcelasAVencer.quantidade > 0) {
-            aVencer++; // Não tem vencida, mas tem a vencer
-          } else if (cliente.parcelasPagas.quantidade > 0) {
-            emDia++; // Só tem pagas
+          // Exibir métricas de performance (se disponíveis)
+          if (responseData.performance) {
+            console.log('[PERFORMANCE] Tempo de processamento:', responseData.performance.tempoProcessamento);
+            console.log('[PERFORMANCE] Clientes em cache:', responseData.performance.clientesCache);
+            console.log('[PERFORMANCE] Vendas processadas:', responseData.performance.vendasProcessadas);
           }
-        });
+          
+          // Informações de paginação (se disponíveis)
+          if (responseData.pagination) {
+            console.log('[PAGINATION] Página:', responseData.pagination.page);
+            console.log('[PAGINATION] Total de vendas:', responseData.pagination.total);
+            console.log('[PAGINATION] Total de páginas:', responseData.pagination.totalPages);
+            console.log('[PAGINATION] Tem mais páginas:', responseData.pagination.hasMore);
+          }
+        }
+        // Fallback para API antiga (array direto)
+        else if (Array.isArray(responseData)) {
+          console.log('[INFO] [rota-detalhes] API antiga detectada (array direto)');
+          clientesArray = responseData;
+        }
+        // Outros formatos de objeto
+        else if (responseData && typeof responseData === 'object') {
+          if (responseData.success === false || responseData.error || responseData.message) {
+            console.log('[INFO] [rota-detalhes] Resposta indica lista vazia ou sem dados');
+            clientesArray = [];
+          } else if (responseData.vendas || responseData.clientes) {
+            clientesArray = responseData.vendas || responseData.clientes || [];
+          } else {
+            console.log('[INFO] [rota-detalhes] Formato de resposta desconhecido, tratando como vazio');
+            clientesArray = [];
+          }
+        }
 
-        // Calcular taxa de inadimplência
-        const totalGeral = valRecebido + valVencido + valAVencer;
-        const taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+        console.log('[RESULT] [rota-detalhes] Array de clientes:', clientesArray.length, 'clientes');
 
-        setTotalEmDia(emDia);
-        setTotalInadimplente(inadimplente);
-        setTotalAVencer(aVencer);
-        setValorRecebido(valRecebido);
-        setValorVencido(valVencido);
-        setValorAVencer(valAVencer);
-        setTaxaInadimplencia(taxaInad);
-        setClientes(clientesProcessados);
-        setClientesFiltrados(clientesProcessados);
-        console.log(`✅ [rota-detalhes] ${clientesProcessados.length} clientes carregados`);
+        // Se não houver vendas, apenas inicializa com arrays vazios sem mostrar erro
+        if (clientesArray.length === 0) {
+          console.log('[INFO] [rota-detalhes] Nenhum cliente cadastrado na rota');
+          setTotalEmDia(0);
+          setTotalInadimplente(0);
+          setTotalAVencer(0);
+          setValorRecebido(0);
+          setValorVencido(0);
+          setValorAVencer(0);
+          setTaxaInadimplencia(0);
+          setClientes([]);
+          setClientesFiltrados([]);
+        } else {
+          // Processar dados da API para formato da tela
+          const clientesProcessados: ClienteProcessado[] = clientesArray.map((item: any) => {
+            console.log('[DEBUG] [rota-detalhes] Item completo da API:', JSON.stringify(item, null, 2));
+            console.log('[DEBUG] [rota-detalhes] Campos disponíveis:', Object.keys(item));
+            
+            // Tentar todas as variações possíveis do ID do parcelamento
+            const parcelamentoId = item.parcelamentoId || 
+                                   item.parcelamento_id || 
+                                   item.parcelamentoAsaas ||
+                                   item.parcelamento_asaas_id ||
+                                   item.asaasId ||
+                                   item.id;
+            
+            console.log('[DEBUG] [rota-detalhes] parcelamentoId extraído:', parcelamentoId);
+            
+            return {
+              ...item,
+              expandido: false,
+              parcelamentoId: parcelamentoId,
+              clienteId: item.clienteId || item.cliente_id
+            };
+          });
+
+          // Calcular estatísticas - Contar CLIENTES por status e VALORES
+          let emDia = 0, inadimplente = 0, aVencer = 0;
+          let valRecebido = 0, valVencido = 0, valAVencer = 0;
+          
+          clientesProcessados.forEach(cliente => {
+            // Somar valores
+            valRecebido += cliente.parcelasPagas.valor;
+            valVencido += cliente.parcelasVencidas.valor;
+            valAVencer += cliente.parcelasAVencer.valor;
+            
+            // Lógica correta: prioridade Inadimplente > A Vencer > Em Dia
+            if (cliente.parcelasVencidas.quantidade > 0) {
+              inadimplente++; // Tem parcela vencida
+            } else if (cliente.parcelasAVencer.quantidade > 0) {
+              aVencer++; // Não tem vencida, mas tem a vencer
+            } else if (cliente.parcelasPagas.quantidade > 0) {
+              emDia++; // Só tem pagas
+            }
+          });
+
+          // Calcular taxa de inadimplência
+          const totalGeral = valRecebido + valVencido + valAVencer;
+          const taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+
+          setTotalEmDia(emDia);
+          setTotalInadimplente(inadimplente);
+          setTotalAVencer(aVencer);
+          setValorRecebido(valRecebido);
+          setValorVencido(valVencido);
+          setValorAVencer(valAVencer);
+          setTaxaInadimplencia(taxaInad);
+          setClientes(clientesProcessados);
+          setClientesFiltrados(clientesProcessados);
+          console.log(`[SUCCESS] [rota-detalhes] ${clientesProcessados.length} clientes carregados`);
+        }
       } else {
-        throw new Error('Erro ao carregar vendas');
+        // Erro real da API (status não OK)
+        console.error('[ERROR] [rota-detalhes] API retornou status não OK:', response.status);
+        throw new Error(`Erro ao carregar vendas (Status: ${response.status})`);
       }
     } catch (error) {
-      console.error('❌ [rota-detalhes] Erro ao carregar vendas:', error);
+      console.error('[ERROR] [rota-detalhes] Erro ao carregar vendas:', error);
       setErrorMessage('Erro ao carregar vendas. Toque para tentar novamente.');
     } finally {
       setLoading(false);
@@ -235,7 +294,7 @@ export default function RotaDetalhesScreen() {
     }
 
     setClientesFiltrados(resultado);
-    console.log(`🔍 [rota-detalhes] ${resultado.length} clientes encontrados`);
+    console.log(`[FILTER] [rota-detalhes] ${resultado.length} clientes encontrados`);
   };
 
   const toggleExpandir = (index: number) => {
@@ -288,16 +347,16 @@ export default function RotaDetalhesScreen() {
     
     // Verificar se temos parcelamentoId
     if (!clienteParaRemover.parcelamentoId) {
-      console.error('❌ [rota-detalhes] parcelamentoId não encontrado');
-      console.error('❌ [rota-detalhes] Cliente completo:', JSON.stringify(clienteParaRemover, null, 2));
-      console.error('❌ [rota-detalhes] Campos disponíveis:', Object.keys(clienteParaRemover));
+      console.error('[ERROR] [rota-detalhes] parcelamentoId não encontrado');
+      console.error('[ERROR] [rota-detalhes] Cliente completo:', JSON.stringify(clienteParaRemover, null, 2));
+      console.error('[ERROR] [rota-detalhes] Campos disponíveis:', Object.keys(clienteParaRemover));
       setErrorMsg('Erro: ID do parcelamento não encontrado. Verifique se a API está retornando o campo correto.');
       setShowErrorModal(true);
       setRemovendo(false);
       return;
     }
     
-    console.log('🔍 [rota-detalhes] Removendo parcelamento da rota:', clienteParaRemover.parcelamentoId);
+    console.log('[DELETE] [rota-detalhes] Removendo parcelamento da rota:', clienteParaRemover.parcelamentoId);
     setShowRemoveModal(false);
     setRemovendo(true);
 
@@ -316,10 +375,10 @@ export default function RotaDetalhesScreen() {
       });
 
       const data = await response.json();
-      console.log('📦 [rota-detalhes] Response:', data);
+      console.log('[RESPONSE] [rota-detalhes] Response:', data);
 
       if (response.ok) {
-        console.log('✅ [rota-detalhes] Cliente removido com sucesso');
+        console.log('[SUCCESS] [rota-detalhes] Cliente removido com sucesso');
         setShowSuccessModal(true);
         // Recarregar lista após sucesso
         setTimeout(() => {
@@ -329,7 +388,7 @@ export default function RotaDetalhesScreen() {
         throw new Error(data.message || 'Erro ao remover cliente');
       }
     } catch (error: any) {
-      console.error('❌ [rota-detalhes] Erro:', error);
+      console.error('[ERROR] [rota-detalhes] Erro:', error);
       setErrorMsg(error.message || 'Erro ao remover cliente da rota');
       setShowErrorModal(true);
     } finally {
@@ -397,9 +456,12 @@ export default function RotaDetalhesScreen() {
             {/* Parcelas Pagas */}
             {item.parcelasPagas.quantidade > 0 && (
               <View style={styles.grupoParcelasContainer}>
-                <Text style={styles.grupoParcelasTitle}>
-                  💚 Pagas ({item.parcelasPagas.quantidade}) - {formatarValor(item.parcelasPagas.valor)}
-                </Text>
+                <View style={styles.grupoParcelasTitleContainer}>
+                  <View style={[styles.statusIndicador, { backgroundColor: '#4CAF50' }]} />
+                  <Text style={styles.grupoParcelasTitle}>
+                    Pagas ({item.parcelasPagas.quantidade}) - {formatarValor(item.parcelasPagas.valor)}
+                  </Text>
+                </View>
                 {item.parcelasPagas.parcelas.map((parcela, idx) => (
                   <View key={`paga-${idx}`} style={[styles.parcelaItem, styles.parcelaPaga]}>
                     <View style={[styles.parcelaIndicador, { backgroundColor: '#4CAF50' }]} />
@@ -415,9 +477,12 @@ export default function RotaDetalhesScreen() {
             {/* Parcelas Vencidas */}
             {item.parcelasVencidas.quantidade > 0 && (
               <View style={styles.grupoParcelasContainer}>
-                <Text style={styles.grupoParcelasTitle}>
-                  🔴 Vencidas ({item.parcelasVencidas.quantidade}) - {formatarValor(item.parcelasVencidas.valor)}
-                </Text>
+                <View style={styles.grupoParcelasTitleContainer}>
+                  <View style={[styles.statusIndicador, { backgroundColor: '#ff4444' }]} />
+                  <Text style={styles.grupoParcelasTitle}>
+                    Vencidas ({item.parcelasVencidas.quantidade}) - {formatarValor(item.parcelasVencidas.valor)}
+                  </Text>
+                </View>
                 {item.parcelasVencidas.parcelas.map((parcela, idx) => (
                   <View key={`vencida-${idx}`} style={[styles.parcelaItem, styles.parcelaVencida]}>
                     <View style={[styles.parcelaIndicador, { backgroundColor: '#ff4444' }]} />
@@ -433,9 +498,12 @@ export default function RotaDetalhesScreen() {
             {/* Parcelas A Vencer */}
             {item.parcelasAVencer.quantidade > 0 && (
               <View style={styles.grupoParcelasContainer}>
-                <Text style={styles.grupoParcelasTitle}>
-                  🟡 A Vencer ({item.parcelasAVencer.quantidade}) - {formatarValor(item.parcelasAVencer.valor)}
-                </Text>
+                <View style={styles.grupoParcelasTitleContainer}>
+                  <View style={[styles.statusIndicador, { backgroundColor: '#FFA500' }]} />
+                  <Text style={styles.grupoParcelasTitle}>
+                    A Vencer ({item.parcelasAVencer.quantidade}) - {formatarValor(item.parcelasAVencer.valor)}
+                  </Text>
+                </View>
                 {item.parcelasAVencer.parcelas.map((parcela, idx) => (
                   <View key={`avencer-${idx}`} style={[styles.parcelaItem, styles.parcelaAVencer]}>
                     <View style={[styles.parcelaIndicador, { backgroundColor: '#FFA500' }]} />
@@ -682,9 +750,15 @@ export default function RotaDetalhesScreen() {
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={80} color="#666" />
-            <Text style={styles.emptyText}>Nenhum cliente encontrado</Text>
+            <Text style={styles.emptyText}>
+              {searchText || filtroStatus !== 'todos' ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+            </Text>
             <Text style={styles.emptySubtext}>
-              {searchText ? 'Tente pesquisar com outro termo' : 'Altere os filtros para ver mais resultados'}
+              {searchText 
+                ? 'Tente pesquisar com outro termo' 
+                : filtroStatus !== 'todos'
+                ? 'Altere os filtros para ver mais resultados'
+                : 'Adicione clientes à esta rota'}
             </Text>
           </View>
         )}
@@ -1053,11 +1127,21 @@ const styles = StyleSheet.create({
   grupoParcelasContainer: {
     marginBottom: 16,
   },
+  grupoParcelasTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  statusIndicador: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   grupoParcelasTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 8,
   },
   parcelaItem: {
     flexDirection: 'row',
