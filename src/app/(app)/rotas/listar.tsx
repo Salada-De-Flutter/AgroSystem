@@ -61,10 +61,14 @@ export default function RotasScreen() {
     <TouchableOpacity 
       style={styles.rotaCard}
       onPress={() => {
-        console.log('🔍 [listar-rotas] Navegando para rota:', item.id, item.nome);
+        console.log('🔍 [listar-rotas] Navegando para rota:', item.id, item.nome, item.vendedor_nome);
         router.push({
           pathname: '/(app)/rotas/[id]',
-          params: { id: item.id, nome: item.nome }
+          params: { 
+            id: item.id, 
+            nome: item.nome,
+            vendedor: item.vendedor_nome 
+          }
         });
       }}
     >

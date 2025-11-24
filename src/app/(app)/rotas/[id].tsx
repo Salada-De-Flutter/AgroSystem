@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { File, Paths } from 'expo-file-system';
+import * as Print from 'expo-print';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Parcela {
   id?: string;
@@ -45,10 +48,12 @@ export default function RotaDetalhesScreen() {
   // params pode retornar string ou array, pegamos o primeiro valor
   const rotaId = Array.isArray(params.id) ? params.id[0] : params.id;
   const rotaNome = (Array.isArray(params.nome) ? params.nome[0] : params.nome) || 'Rota';
+  const vendedorNome = (Array.isArray(params.vendedor) ? params.vendedor[0] : params.vendedor) || 'Vendedor';
 
   console.log('[DEBUG] [rota-detalhes] Params recebidos:', params);
   console.log('[DEBUG] [rota-detalhes] rotaId extraído:', rotaId);
   console.log('[DEBUG] [rota-detalhes] rotaNome extraído:', rotaNome);
+  console.log('[DEBUG] [rota-detalhes] vendedorNome extraído:', vendedorNome);
 
   const [clientes, setClientes] = useState<ClienteProcessado[]>([]);
   const [clientesFiltrados, setClientesFiltrados] = useState<ClienteProcessado[]>([]);
@@ -75,10 +80,17 @@ export default function RotaDetalhesScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [clienteParaRemover, setClienteParaRemover] = useState<ClienteProcessado | null>(null);
   const [removendo, setRemovendo] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [showRelatorioModal, setShowRelatorioModal] = useState(false);
+  const [vendedorDaRota, setVendedorDaRota] = useState<string>(vendedorNome);
 
   useEffect(() => {
     if (rotaId) {
       carregarVendas();
+      // Se vendedor não foi passado nos params, buscar da API
+      if (vendedorNome === 'Vendedor') {
+        buscarDadosRota();
+      }
     } else {
       console.error('[ERROR] [rota-detalhes] rotaId não foi fornecido!');
       setErrorMessage('ID da rota não encontrado');
@@ -95,6 +107,232 @@ export default function RotaDetalhesScreen() {
     }, [rotaId])
   );
 
+  const carregarDadosTeste = () => {
+    console.log('[TEST] Carregando dados de teste...');
+    
+    // Dados fictícios para teste
+    const clientesTeste: ClienteProcessado[] = [
+      {
+        nomeCliente: 'João Silva',
+        clienteId: 'cliente-1',
+        parcelamentoId: 'parc-1',
+        status: 'Em Dia',
+        expandido: false,
+        parcelasPagas: {
+          quantidade: 3,
+          valor: 900.00,
+          parcelas: [
+            { valor: 300.00, dataVencimento: '2025-01-15' },
+            { valor: 300.00, dataVencimento: '2025-02-15' },
+            { valor: 300.00, dataVencimento: '2025-03-15' },
+          ]
+        },
+        parcelasVencidas: {
+          quantidade: 0,
+          valor: 0,
+          parcelas: []
+        },
+        parcelasAVencer: {
+          quantidade: 2,
+          valor: 600.00,
+          parcelas: [
+            { valor: 300.00, dataVencimento: '2025-12-15' },
+            { valor: 300.00, dataVencimento: '2026-01-15' },
+          ]
+        }
+      },
+      {
+        nomeCliente: 'Maria Oliveira',
+        clienteId: 'cliente-2',
+        parcelamentoId: 'parc-2',
+        status: 'Inadimplente',
+        expandido: false,
+        parcelasPagas: {
+          quantidade: 1,
+          valor: 250.00,
+          parcelas: [
+            { valor: 250.00, dataVencimento: '2025-01-10' },
+          ]
+        },
+        parcelasVencidas: {
+          quantidade: 3,
+          valor: 750.00,
+          parcelas: [
+            { valor: 250.00, dataVencimento: '2025-02-10' },
+            { valor: 250.00, dataVencimento: '2025-03-10' },
+            { valor: 250.00, dataVencimento: '2025-04-10' },
+          ]
+        },
+        parcelasAVencer: {
+          quantidade: 4,
+          valor: 1000.00,
+          parcelas: [
+            { valor: 250.00, dataVencimento: '2025-12-10' },
+            { valor: 250.00, dataVencimento: '2026-01-10' },
+            { valor: 250.00, dataVencimento: '2026-02-10' },
+            { valor: 250.00, dataVencimento: '2026-03-10' },
+          ]
+        }
+      },
+      {
+        nomeCliente: 'Pedro Santos',
+        clienteId: 'cliente-3',
+        parcelamentoId: 'parc-3',
+        status: 'A Vencer',
+        expandido: false,
+        parcelasPagas: {
+          quantidade: 5,
+          valor: 2500.00,
+          parcelas: [
+            { valor: 500.00, dataVencimento: '2025-01-20' },
+            { valor: 500.00, dataVencimento: '2025-02-20' },
+            { valor: 500.00, dataVencimento: '2025-03-20' },
+            { valor: 500.00, dataVencimento: '2025-04-20' },
+            { valor: 500.00, dataVencimento: '2025-05-20' },
+          ]
+        },
+        parcelasVencidas: {
+          quantidade: 0,
+          valor: 0,
+          parcelas: []
+        },
+        parcelasAVencer: {
+          quantidade: 7,
+          valor: 3500.00,
+          parcelas: [
+            { valor: 500.00, dataVencimento: '2025-12-20' },
+            { valor: 500.00, dataVencimento: '2026-01-20' },
+            { valor: 500.00, dataVencimento: '2026-02-20' },
+            { valor: 500.00, dataVencimento: '2026-03-20' },
+            { valor: 500.00, dataVencimento: '2026-04-20' },
+            { valor: 500.00, dataVencimento: '2026-05-20' },
+            { valor: 500.00, dataVencimento: '2026-06-20' },
+          ]
+        }
+      },
+      {
+        nomeCliente: 'Ana Costa',
+        clienteId: 'cliente-4',
+        parcelamentoId: 'parc-4',
+        status: 'Inadimplente',
+        expandido: false,
+        parcelasPagas: {
+          quantidade: 0,
+          valor: 0,
+          parcelas: []
+        },
+        parcelasVencidas: {
+          quantidade: 5,
+          valor: 1250.00,
+          parcelas: [
+            { valor: 250.00, dataVencimento: '2025-01-05' },
+            { valor: 250.00, dataVencimento: '2025-02-05' },
+            { valor: 250.00, dataVencimento: '2025-03-05' },
+            { valor: 250.00, dataVencimento: '2025-04-05' },
+            { valor: 250.00, dataVencimento: '2025-05-05' },
+          ]
+        },
+        parcelasAVencer: {
+          quantidade: 3,
+          valor: 750.00,
+          parcelas: [
+            { valor: 250.00, dataVencimento: '2025-12-05' },
+            { valor: 250.00, dataVencimento: '2026-01-05' },
+            { valor: 250.00, dataVencimento: '2026-02-05' },
+          ]
+        }
+      },
+      {
+        nomeCliente: 'Carlos Ferreira',
+        clienteId: 'cliente-5',
+        parcelamentoId: 'parc-5',
+        status: 'Em Dia',
+        expandido: false,
+        parcelasPagas: {
+          quantidade: 8,
+          valor: 4000.00,
+          parcelas: [
+            { valor: 500.00, dataVencimento: '2025-01-25' },
+            { valor: 500.00, dataVencimento: '2025-02-25' },
+            { valor: 500.00, dataVencimento: '2025-03-25' },
+            { valor: 500.00, dataVencimento: '2025-04-25' },
+            { valor: 500.00, dataVencimento: '2025-05-25' },
+            { valor: 500.00, dataVencimento: '2025-06-25' },
+            { valor: 500.00, dataVencimento: '2025-07-25' },
+            { valor: 500.00, dataVencimento: '2025-08-25' },
+          ]
+        },
+        parcelasVencidas: {
+          quantidade: 0,
+          valor: 0,
+          parcelas: []
+        },
+        parcelasAVencer: {
+          quantidade: 4,
+          valor: 2000.00,
+          parcelas: [
+            { valor: 500.00, dataVencimento: '2025-12-25' },
+            { valor: 500.00, dataVencimento: '2026-01-25' },
+            { valor: 500.00, dataVencimento: '2026-02-25' },
+            { valor: 500.00, dataVencimento: '2026-03-25' },
+          ]
+        }
+      }
+    ];
+
+    // Calcular estatísticas
+    let emDia = 0, inadimplente = 0, aVencer = 0;
+    let valRecebido = 0, valVencido = 0, valAVencer = 0;
+    
+    clientesTeste.forEach(cliente => {
+      valRecebido += cliente.parcelasPagas.valor;
+      valVencido += cliente.parcelasVencidas.valor;
+      valAVencer += cliente.parcelasAVencer.valor;
+      
+      if (cliente.parcelasVencidas.quantidade > 0) {
+        inadimplente++;
+      } else if (cliente.parcelasAVencer.quantidade > 0) {
+        aVencer++;
+      } else if (cliente.parcelasPagas.quantidade > 0) {
+        emDia++;
+      }
+    });
+
+    const totalGeral = valRecebido + valVencido + valAVencer;
+    const taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+
+    setTotalEmDia(emDia);
+    setTotalInadimplente(inadimplente);
+    setTotalAVencer(aVencer);
+    setValorRecebido(valRecebido);
+    setValorVencido(valVencido);
+    setValorAVencer(valAVencer);
+    setTaxaInadimplencia(taxaInad);
+    setClientes(clientesTeste);
+    setClientesFiltrados(clientesTeste);
+    setLoading(false);
+    
+    console.log('[TEST] Dados de teste carregados:', clientesTeste.length, 'clientes');
+  };
+
+  const buscarDadosRota = async () => {
+    try {
+      console.log('[INFO] [rota-detalhes] Buscando dados da rota...');
+      const response = await fetch('https://vqdmwevdlmqdtfbfceoc.supabase.co/functions/v1/listar-rotas');
+      const data = await response.json();
+
+      if (response.ok && data.sucesso && Array.isArray(data.rotas)) {
+        const rotaEncontrada = data.rotas.find((r: any) => r.id === rotaId);
+        if (rotaEncontrada && rotaEncontrada.vendedor_nome) {
+          console.log('[SUCCESS] [rota-detalhes] Vendedor encontrado:', rotaEncontrada.vendedor_nome);
+          setVendedorDaRota(rotaEncontrada.vendedor_nome);
+        }
+      }
+    } catch (error) {
+      console.error('[ERROR] [rota-detalhes] Erro ao buscar dados da rota:', error);
+    }
+  };
+
   const carregarVendas = async () => {
     console.log(`[LOAD] [rota-detalhes] Carregando vendas da rota ${rotaId}...`);
     console.log(`[LOAD] [rota-detalhes] Tipo do rotaId:`, typeof rotaId);
@@ -105,7 +343,10 @@ export default function RotaDetalhesScreen() {
     try {
       const API_URL = 'https://agroserver-it9g.onrender.com/api/rota/vendas';
       const body = {
-        rota_id: rotaId
+        rota_id: rotaId,
+        // limit: 1000 é o padrão no backend, mas pode ser ajustado se necessário
+        // Se sua rota tiver mais de 1000 clientes, aumente este valor:
+        // limit: 9999
       };
       
       console.log(`[SEND] [rota-detalhes] Body sendo enviado:`, JSON.stringify(body));
@@ -119,6 +360,13 @@ export default function RotaDetalhesScreen() {
       });
 
       console.log('[RESPONSE] [rota-detalhes] Response status:', response.status);
+      
+      // Verificar se a resposta é JSON válido
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[ERROR] [rota-detalhes] Resposta não é JSON. Content-Type:', contentType);
+        throw new Error('API retornou formato inválido (não é JSON)');
+      }
       
       const responseData = await response.json();
       console.log('[DATA] [rota-detalhes] Response data:', JSON.stringify(responseData, null, 2));
@@ -145,6 +393,14 @@ export default function RotaDetalhesScreen() {
             console.log('[PAGINATION] Total de vendas:', responseData.pagination.total);
             console.log('[PAGINATION] Total de páginas:', responseData.pagination.totalPages);
             console.log('[PAGINATION] Tem mais páginas:', responseData.pagination.hasMore);
+            
+            // Aviso se houver mais páginas (indicando que precisa aumentar o limit)
+            if (responseData.pagination.hasMore) {
+              console.warn('[WARNING] Há mais clientes disponíveis! Considere aumentar o limit na requisição.');
+              console.warn('[WARNING] Total de clientes:', responseData.pagination.total);
+            } else {
+              console.log('[SUCCESS] Todos os clientes da rota foram carregados!');
+            }
           }
         }
         // Fallback para API antiga (array direto)
@@ -340,6 +596,522 @@ export default function RotaDetalhesScreen() {
       return { status: 'Em Dia', cor: '#4CAF50', corFundo: '#1a3a1a' };
     }
     return { status: 'Sem Parcelas', cor: '#666', corFundo: '#2a2a2a' };
+  };
+
+  const gerarRelatorioPDF = async (tipoRelatorio: 'completo' | 'recebido' | 'a_vencer' | 'inadimplente') => {
+    setGerandoPdf(true);
+    setShowRelatorioModal(false);
+    console.log('[PDF] Iniciando geração do relatório:', tipoRelatorio);
+
+    try {
+      const dataAtual = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Filtrar clientes baseado no tipo de relatório e ordenar alfabeticamente
+      let clientesParaPDF: ClienteProcessado[] = [];
+      let titulo = '';
+      
+      switch (tipoRelatorio) {
+        case 'completo':
+          clientesParaPDF = [...clientes].sort((a, b) => a.nomeCliente.localeCompare(b.nomeCliente));
+          titulo = 'Relatório Completo';
+          break;
+        case 'recebido':
+          clientesParaPDF = clientes
+            .filter(c => c.parcelasPagas.quantidade > 0 && c.parcelasVencidas.quantidade === 0 && c.parcelasAVencer.quantidade === 0)
+            .sort((a, b) => a.nomeCliente.localeCompare(b.nomeCliente));
+          titulo = 'Relatório de Pagamentos Recebidos';
+          break;
+        case 'a_vencer':
+          clientesParaPDF = clientes
+            .filter(c => c.parcelasAVencer.quantidade > 0 && c.parcelasVencidas.quantidade === 0)
+            .sort((a, b) => a.nomeCliente.localeCompare(b.nomeCliente));
+          titulo = 'Relatório de Parcelas a Vencer';
+          break;
+        case 'inadimplente':
+          clientesParaPDF = clientes
+            .filter(c => c.parcelasVencidas.quantidade > 0)
+            .sort((a, b) => a.nomeCliente.localeCompare(b.nomeCliente));
+          titulo = 'Relatório de Inadimplência';
+          break;
+      }
+
+      console.log(`[PDF] ${clientesParaPDF.length} clientes no relatório`);
+
+      // Calcular estatísticas baseadas nos clientes selecionados
+      let emDia = 0, inadimplente = 0, aVencer = 0;
+      let valRecebido = 0, valVencido = 0, valAVencer = 0;
+      
+      clientesParaPDF.forEach(cliente => {
+        valRecebido += cliente.parcelasPagas.valor;
+        valVencido += cliente.parcelasVencidas.valor;
+        valAVencer += cliente.parcelasAVencer.valor;
+        
+        if (cliente.parcelasVencidas.quantidade > 0) {
+          inadimplente++;
+        } else if (cliente.parcelasAVencer.quantidade > 0) {
+          aVencer++;
+        } else if (cliente.parcelasPagas.quantidade > 0) {
+          emDia++;
+        }
+      });
+
+      // Para relatórios específicos, calcular taxa baseada em TODOS os clientes (não filtrados)
+      let taxaInad = 0;
+      if (tipoRelatorio === 'completo') {
+        const totalGeral = valRecebido + valVencido + valAVencer;
+        taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+      } else if (tipoRelatorio === 'inadimplente') {
+        // Para relatório de inadimplentes, usar dados globais
+        const totalGeralGlobal = valorRecebido + valorVencido + valorAVencer;
+        taxaInad = totalGeralGlobal > 0 ? (valorVencido / totalGeralGlobal) * 100 : 0;
+      }
+      
+      const totalGeral = valRecebido + valVencido + valAVencer;
+
+      // Gerar HTML do relatório
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: 'Arial', sans-serif; 
+              padding: 20px; 
+              background: #1a1a1a;
+              color: #e0e0e0;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 20px;
+              border-bottom: 3px solid #4CAF50;
+            }
+            .header h1 { 
+              color: #ffffff; 
+              font-size: 28px;
+              margin-bottom: 10px;
+            }
+            .header .subtitle {
+              color: #b0b0b0;
+              font-size: 14px;
+            }
+            .header .tipo-relatorio {
+              color: #4CAF50;
+              font-size: 16px;
+              font-weight: 600;
+              margin-top: 8px;
+            }
+            .resumo {
+              background: #2a2a2a;
+              padding: 20px;
+              border-radius: 8px;
+              margin-bottom: 30px;
+              border: 1px solid #333;
+            }
+            .resumo h2 {
+              color: #ffffff;
+              font-size: 20px;
+              margin-bottom: 15px;
+              border-bottom: 2px solid #4CAF50;
+              padding-bottom: 8px;
+            }
+            .stats {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            .stats.centro {
+              grid-template-columns: repeat(2, 1fr);
+              max-width: 100%;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            .stat-card {
+              background: #252525;
+              padding: 15px;
+              border-radius: 6px;
+              border: 1px solid #333;
+              border-top: 3px solid #4CAF50;
+              text-align: center;
+            }
+            .stat-card.inadimplente { border-top-color: #ff4444; }
+            .stat-card.a-vencer { border-top-color: #FFA500; }
+            .stat-card h3 {
+              font-size: 12px;
+              color: #999;
+              text-transform: uppercase;
+              margin-bottom: 8px;
+            }
+            .stat-card .value {
+              font-size: 24px;
+              font-weight: bold;
+              color: #ffffff;
+            }
+            .financeiro {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 15px;
+              margin-bottom: 15px;
+            }
+            .financeiro.centro {
+              grid-template-columns: 1fr;
+              max-width: 400px;
+              margin-left: auto;
+              margin-right: auto;
+            }
+            .financeiro-item {
+              background: #252525;
+              padding: 12px;
+              border-radius: 6px;
+              text-align: center;
+              border: 1px solid #333;
+            }
+            .financeiro-item.recebido { border-top: 3px solid #4CAF50; }
+            .financeiro-item.vencido { border-top: 3px solid #ff4444; }
+            .financeiro-item.a-vencer { border-top: 3px solid #FFA500; }
+            .financeiro-item h4 {
+              font-size: 11px;
+              color: #999;
+              margin-bottom: 6px;
+              text-transform: uppercase;
+            }
+            .financeiro-item .valor {
+              font-size: 16px;
+              font-weight: bold;
+            }
+            .financeiro-item.recebido .valor { color: #4CAF50; }
+            .financeiro-item.vencido .valor { color: #ff4444; }
+            .financeiro-item.a-vencer .valor { color: #FFA500; }
+            .totais {
+              display: flex;
+              justify-content: space-around;
+              background: #252525;
+              padding: 15px;
+              border-radius: 6px;
+              border: 1px solid #333;
+            }
+            .total-item {
+              text-align: center;
+            }
+            .total-item h4 {
+              font-size: 12px;
+              color: #999;
+              margin-bottom: 6px;
+            }
+            .total-item .valor {
+              font-size: 18px;
+              font-weight: bold;
+              color: #ffffff;
+            }
+            .clientes {
+              margin-top: 30px;
+            }
+            .clientes h2 {
+              color: #ffffff;
+              font-size: 20px;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #4CAF50;
+              padding-bottom: 8px;
+            }
+            .cliente {
+              background: #2a2a2a;
+              margin-bottom: 20px;
+              padding: 15px;
+              border-radius: 8px;
+              border: 1px solid #333;
+              page-break-inside: avoid;
+            }
+            .cliente-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 15px;
+              padding-bottom: 12px;
+              border-bottom: 1px solid #444;
+            }
+            .cliente-nome {
+              font-size: 16px;
+              font-weight: bold;
+              color: #ffffff;
+            }
+            .cliente-status {
+              padding: 6px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+            }
+            .status-em-dia { background: #1a3a1a; color: #4CAF50; border: 1px solid #4CAF50; }
+            .status-inadimplente { background: #3a1a1a; color: #ff4444; border: 1px solid #ff4444; }
+            .status-a-vencer { background: #3a2a1a; color: #FFA500; border: 1px solid #FFA500; }
+            .parcelas-grupo {
+              margin-top: 15px;
+            }
+            .parcelas-grupo h4 {
+              font-size: 13px;
+              font-weight: 600;
+              color: #e0e0e0;
+              margin-bottom: 10px;
+              display: flex;
+              align-items: center;
+            }
+            .parcelas-grupo h4::before {
+              content: '';
+              display: inline-block;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              margin-right: 8px;
+            }
+            .parcelas-grupo.pagas h4::before { background: #4CAF50; }
+            .parcelas-grupo.vencidas h4::before { background: #ff4444; }
+            .parcelas-grupo.a-vencer h4::before { background: #FFA500; }
+            .parcela {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 12px;
+              background: #1a1a1a;
+              margin-bottom: 6px;
+              border-radius: 4px;
+              font-size: 12px;
+              border: 1px solid #333;
+            }
+            .parcela-valor {
+              font-weight: 600;
+              color: #ffffff;
+            }
+            .parcela-data {
+              color: #b0b0b0;
+            }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 2px solid #444;
+              text-align: center;
+              color: #999;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Relatório de Rota</h1>
+            <div class="subtitle">${rotaNome}</div>
+            <div class="tipo-relatorio">${titulo}</div>
+            <div class="subtitle">Gerado em: ${dataAtual}</div>
+          </div>
+
+          <div class="resumo">
+            <h2>Resumo Geral</h2>
+            
+            ${tipoRelatorio === 'completo' ? `
+            <div class="stats">
+              <div class="stat-card">
+                <h3>Em Dia</h3>
+                <div class="value">${emDia}</div>
+              </div>
+              <div class="stat-card inadimplente">
+                <h3>Inadimplente</h3>
+                <div class="value">${inadimplente}</div>
+              </div>
+              <div class="stat-card a-vencer">
+                <h3>A Vencer</h3>
+                <div class="value">${aVencer}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            ${tipoRelatorio === 'recebido' ? `
+            <div class="stats centro">
+              <div class="stat-card">
+                <h3>Clientes em Dia</h3>
+                <div class="value">${emDia}</div>
+              </div>
+              <div class="financeiro-item recebido">
+                <h4>Total Recebido</h4>
+                <div class="valor">${formatarValor(valRecebido)}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            ${tipoRelatorio === 'inadimplente' ? `
+            <div class="stats centro">
+              <div class="stat-card inadimplente">
+                <h3>Clientes Inadimplentes</h3>
+                <div class="value">${inadimplente}</div>
+              </div>
+              <div class="financeiro-item vencido">
+                <h4>Total Vencido</h4>
+                <div class="valor">${formatarValor(valVencido)}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            ${tipoRelatorio === 'a_vencer' ? `
+            <div class="stats centro">
+              <div class="stat-card a-vencer">
+                <h3>Clientes com Parcelas a Vencer</h3>
+                <div class="value">${aVencer}</div>
+              </div>
+              <div class="financeiro-item a-vencer">
+                <h4>Total a Vencer</h4>
+                <div class="valor">${formatarValor(valAVencer)}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            ${tipoRelatorio === 'completo' ? `
+            <div class="financeiro">
+              <div class="financeiro-item recebido">
+                <h4>Recebido</h4>
+                <div class="valor">${formatarValor(valRecebido)}</div>
+              </div>
+              <div class="financeiro-item vencido">
+                <h4>Vencido</h4>
+                <div class="valor">${formatarValor(valVencido)}</div>
+              </div>
+              <div class="financeiro-item a-vencer">
+                <h4>A Vencer</h4>
+                <div class="valor">${formatarValor(valAVencer)}</div>
+              </div>
+            </div>
+            ` : ''}
+
+            <div class="totais">
+              <div class="total-item">
+                <h4>Total ${tipoRelatorio === 'completo' ? 'Geral' : ''}</h4>
+                <div class="valor">${formatarValor(tipoRelatorio === 'recebido' ? valRecebido : tipoRelatorio === 'a_vencer' ? valAVencer : tipoRelatorio === 'inadimplente' ? valVencido : totalGeral)}</div>
+              </div>
+              ${tipoRelatorio === 'completo' || tipoRelatorio === 'inadimplente' ? `
+              <div class="total-item">
+                <h4>Taxa de Inadimplência</h4>
+                <div class="valor" style="color: ${taxaInad > 20 ? '#ff4444' : taxaInad > 10 ? '#FFA500' : '#4CAF50'}">${taxaInad.toFixed(1)}%</div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="clientes">
+            <h2>Detalhamento por Cliente (${clientesParaPDF.length} ${clientesParaPDF.length === 1 ? 'cliente' : 'clientes'})</h2>
+            
+            ${clientesParaPDF.map((cliente) => {
+              const statusInfo = determinarStatusCliente(cliente);
+              const statusClass = statusInfo.status === 'Em Dia' ? 'status-em-dia' : 
+                                  statusInfo.status === 'Inadimplente' ? 'status-inadimplente' : 'status-a-vencer';
+              
+              return `
+                <div class="cliente">
+                  <div class="cliente-header">
+                    <div class="cliente-nome">${cliente.nomeCliente}</div>
+                    <div class="cliente-status ${statusClass}">${statusInfo.status}</div>
+                  </div>
+
+                  ${(tipoRelatorio === 'completo' || tipoRelatorio === 'recebido') && cliente.parcelasPagas.quantidade > 0 ? `
+                    <div class="parcelas-grupo pagas">
+                      <h4>Pagas: ${cliente.parcelasPagas.quantidade} × ${formatarValor(cliente.parcelasPagas.valor / cliente.parcelasPagas.quantidade)} = ${formatarValor(cliente.parcelasPagas.valor)}</h4>
+                    </div>
+                  ` : ''}
+
+                  ${(tipoRelatorio === 'completo' || tipoRelatorio === 'inadimplente') && cliente.parcelasVencidas.quantidade > 0 ? `
+                    <div class="parcelas-grupo vencidas">
+                      <h4>Vencidas: ${cliente.parcelasVencidas.quantidade} × ${formatarValor(cliente.parcelasVencidas.valor / cliente.parcelasVencidas.quantidade)} = ${formatarValor(cliente.parcelasVencidas.valor)}</h4>
+                    </div>
+                  ` : ''}
+
+                  ${(tipoRelatorio === 'completo' || tipoRelatorio === 'a_vencer') && cliente.parcelasAVencer.quantidade > 0 ? `
+                    <div class="parcelas-grupo a-vencer">
+                      <h4>A Vencer: ${cliente.parcelasAVencer.quantidade} × ${formatarValor(cliente.parcelasAVencer.valor / cliente.parcelasAVencer.quantidade)} = ${formatarValor(cliente.parcelasAVencer.valor)}</h4>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="footer">
+            <p>Relatório gerado pelo AgroSystem</p>
+            <p>${dataAtual}</p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      console.log('[PDF] HTML gerado, criando PDF...');
+
+      // Formatar data para o nome do arquivo (DD-MM-YYYY)
+      const dataArquivo = new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).replace(/\//g, '-');
+
+      // Criar nome do arquivo: Relatório {tipo} - Nome da rota - Nome vendedor - Data
+      const nomeArquivo = `Relatorio ${titulo.replace('Relatório de ', '').replace('Relatório ', '')} - ${rotaNome} - ${vendedorDaRota} - ${dataArquivo}.pdf`;
+      
+      console.log('[PDF] Nome do arquivo:', nomeArquivo);
+      console.log('[PDF] Vendedor usado:', vendedorDaRota);
+
+      // Gerar PDF temporário
+      const { uri: tempUri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false
+      });
+
+      console.log('[PDF] PDF temporário criado:', tempUri);
+
+      // Criar arquivo final com o nome correto
+      const finalFile = new File(Paths.cache, nomeArquivo);
+      const tempFile = new File(tempUri);
+      
+      // Copiar conteúdo do arquivo temporário para o arquivo final (como ArrayBuffer para preservar o PDF)
+      await finalFile.create();
+      const tempArrayBuffer = await tempFile.arrayBuffer();
+      const tempUint8Array = new Uint8Array(tempArrayBuffer);
+      const writer = await finalFile.writableStream();
+      const writerInstance = writer.getWriter();
+      await writerInstance.write(tempUint8Array);
+      await writerInstance.close();
+
+      console.log('[PDF] PDF renomeado para:', finalFile.uri);
+
+      // Verificar se o compartilhamento está disponível
+      const isAvailable = await Sharing.isAvailableAsync();
+      
+      if (isAvailable) {
+        console.log('[PDF] Compartilhando PDF...');
+        await Sharing.shareAsync(finalFile.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: nomeArquivo.replace('.pdf', ''),
+          UTI: 'com.adobe.pdf'
+        });
+        console.log('[PDF] PDF compartilhado com sucesso!');
+      } else {
+        Alert.alert(
+          'PDF Gerado',
+          `O relatório foi gerado com sucesso!\nLocal: ${finalFile.uri}`,
+          [{ text: 'OK' }]
+        );
+      }
+
+    } catch (error) {
+      console.error('[PDF] Erro ao gerar relatório:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível gerar o relatório PDF. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setGerandoPdf(false);
+    }
   };
 
   const confirmarRemocao = async () => {
@@ -543,7 +1315,17 @@ export default function RotaDetalhesScreen() {
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{rotaNome}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity 
+          onPress={() => setShowRelatorioModal(true)} 
+          style={styles.pdfButton}
+          disabled={loading || gerandoPdf || clientes.length === 0}
+        >
+          {gerandoPdf ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Ionicons name="document-text" size={24} color={clientes.length === 0 ? "#666" : "#4CAF50"} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView 
@@ -649,6 +1431,18 @@ export default function RotaDetalhesScreen() {
           >
             <Ionicons name="person-add" size={20} color="#4CAF50" />
             <Text style={styles.adicionarClienteText}>Adicionar Cliente na Rota</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Botão de Teste - Carregar Dados Fictícios */}
+        {!loading && clientes.length === 0 && (
+          <TouchableOpacity 
+            style={styles.testButton}
+            onPress={carregarDadosTeste}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="flask" size={20} color="#FFA500" />
+            <Text style={styles.testButtonText}>Carregar Dados de Teste</Text>
           </TouchableOpacity>
         )}
 
@@ -774,6 +1568,16 @@ export default function RotaDetalhesScreen() {
         </View>
       )}
 
+      {/* Loading Overlay ao gerar PDF */}
+      {gerandoPdf && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingOverlayContent}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.loadingOverlayText}>Gerando relatório PDF...</Text>
+          </View>
+        </View>
+      )}
+
       {/* Modal de Confirmação de Remoção */}
       <Modal
         visible={showRemoveModal}
@@ -853,6 +1657,66 @@ export default function RotaDetalhesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Opções de Relatório */}
+      <Modal
+        visible={showRelatorioModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRelatorioModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="document-text" size={48} color="#4CAF50" />
+            <Text style={styles.modalTitle}>Gerar Relatório PDF</Text>
+            <Text style={styles.modalMessage}>Escolha o tipo de relatório:</Text>
+            
+            <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
+              <TouchableOpacity 
+                style={[styles.relatorioOpcao, { borderColor: '#4CAF50' }]}
+                onPress={() => gerarRelatorioPDF('completo')}
+              >
+                <Ionicons name="list" size={24} color="#4CAF50" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.relatorioOpcaoTitulo}>Relatório Completo</Text>
+                  <Text style={styles.relatorioOpcaoDesc}>Todos os clientes com todas as informações</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.relatorioOpcao, { borderColor: '#4CAF50' }]}
+                onPress={() => gerarRelatorioPDF('recebido')}
+              >
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                <Text style={styles.relatorioOpcaoTitulo}>Pagamentos Recebidos</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.relatorioOpcao, { borderColor: '#FFA500' }]}
+                onPress={() => gerarRelatorioPDF('a_vencer')}
+              >
+                <Ionicons name="time" size={24} color="#FFA500" />
+                <Text style={styles.relatorioOpcaoTitulo}>Parcelas a Vencer</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.relatorioOpcao, { borderColor: '#ff4444' }]}
+                onPress={() => gerarRelatorioPDF('inadimplente')}
+              >
+                <Ionicons name="warning" size={24} color="#ff4444" />
+                <Text style={styles.relatorioOpcaoTitulo}>Clientes Inadimplentes</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalButtonCancel, { marginTop: 8, width: '100%', flex: 0 }]}
+                onPress={() => setShowRelatorioModal(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -871,6 +1735,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2a2a2a',
   },
   backButton: {
+    padding: 8,
+  },
+  pdfButton: {
     padding: 8,
   },
   headerTitle: {
@@ -1294,6 +2161,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
+  // Botão de Teste
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2a2a2a',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#FFA500',
+    gap: 10,
+  },
+  testButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFA500',
+  },
   // Botão Remover Cliente
   removerClienteButton: {
     flexDirection: 'row',
@@ -1390,7 +2277,7 @@ const styles = StyleSheet.create({
     borderColor: '#ff4444',
   },
   modalButtonTextCancel: {
-    color: '#b0b0b0',
+    color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -1403,5 +2290,25 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     fontSize: 15,
     fontWeight: '600',
+  },
+  relatorioOpcao: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  relatorioOpcaoTitulo: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  relatorioOpcaoDesc: {
+    color: '#999',
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
