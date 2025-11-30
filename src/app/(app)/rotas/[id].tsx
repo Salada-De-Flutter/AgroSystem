@@ -4,7 +4,7 @@ import * as Print from 'expo-print';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Parcela {
   id?: string;
@@ -17,6 +17,8 @@ interface ClienteData {
   nomeCliente: string;
   clienteId?: string;
   parcelamentoId?: string;
+  // optional celular/phone for contact (may be absent from API responses)
+  celular?: string;
   status: string;
   parcelasVencidas: {
     quantidade: number;
@@ -106,6 +108,7 @@ export default function RotaDetalhesScreen() {
       }
     }, [rotaId])
   );
+
 
   const carregarDadosTeste = () => {
     console.log('[TEST] Carregando dados de teste...');
@@ -333,10 +336,12 @@ export default function RotaDetalhesScreen() {
     }
   };
 
+
   const carregarVendas = async () => {
     console.log(`[LOAD] [rota-detalhes] Carregando vendas da rota ${rotaId}...`);
     console.log(`[LOAD] [rota-detalhes] Tipo do rotaId:`, typeof rotaId);
     console.log(`[LOAD] [rota-detalhes] rotaId valor:`, rotaId);
+
     setLoading(true);
     setErrorMessage('');
 
@@ -379,21 +384,18 @@ export default function RotaDetalhesScreen() {
         if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
           console.log('[INFO] [rota-detalhes] API otimizada detectada');
           clientesArray = responseData.data;
-          
           // Exibir métricas de performance (se disponíveis)
           if (responseData.performance) {
             console.log('[PERFORMANCE] Tempo de processamento:', responseData.performance.tempoProcessamento);
             console.log('[PERFORMANCE] Clientes em cache:', responseData.performance.clientesCache);
             console.log('[PERFORMANCE] Vendas processadas:', responseData.performance.vendasProcessadas);
           }
-          
           // Informações de paginação (se disponíveis)
           if (responseData.pagination) {
             console.log('[PAGINATION] Página:', responseData.pagination.page);
             console.log('[PAGINATION] Total de vendas:', responseData.pagination.total);
             console.log('[PAGINATION] Total de páginas:', responseData.pagination.totalPages);
             console.log('[PAGINATION] Tem mais páginas:', responseData.pagination.hasMore);
-            
             // Aviso se houver mais páginas (indicando que precisa aumentar o limit)
             if (responseData.pagination.hasMore) {
               console.warn('[WARNING] Há mais clientes disponíveis! Considere aumentar o limit na requisição.');
@@ -1288,6 +1290,33 @@ export default function RotaDetalhesScreen() {
               </View>
             )}
 
+            {/* Botão Cobrar via WhatsApp */}
+              <TouchableOpacity
+              style={[styles.removerClienteButton, { backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', marginBottom: 8 }]}
+              onPress={() => {
+                const numero = item.celular ? item.celular.replace(/\D/g, '') : '';
+                if (!numero) {
+                  Alert.alert('Erro', 'Cliente sem número de celular cadastrado.');
+                  return;
+                }
+                const mensagem = encodeURIComponent(`Olá ${item.nomeCliente}, tudo bem?\n\nEstamos entrando em contato para lembrar sobre suas parcelas da rota ${rotaNome}. Caso tenha dúvidas ou precise de ajuda, estamos à disposição!`);
+                const url = `https://wa.me/${numero}?text=${mensagem}`;
+                // Abrir link no navegador (Web ou App)
+                if (typeof window !== 'undefined' && typeof window.open === 'function') {
+                  window.open(url, '_blank');
+                } else {
+                  Linking.openURL(url).catch(() => {
+                    Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
+                  });
+                }
+              }}
+              activeOpacity={0.7}
+              disabled={removendo}
+            >
+              <Ionicons name="logo-whatsapp" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={[styles.removerClienteText, { color: '#fff' }]}>Cobrar via WhatsApp</Text>
+            </TouchableOpacity>
+
             {/* Botão Remover Cliente da Rota */}
             <TouchableOpacity 
               style={styles.removerClienteButton}
@@ -1327,6 +1356,7 @@ export default function RotaDetalhesScreen() {
           )}
         </TouchableOpacity>
       </View>
+
 
       <ScrollView 
         style={styles.content}
@@ -1518,9 +1548,9 @@ export default function RotaDetalhesScreen() {
 
         {/* Mensagem de Erro */}
         {errorMessage ? (
-          <TouchableOpacity style={styles.errorContainer} onPress={carregarVendas}>
+          <TouchableOpacity style={styles.errorMessageContainer} onPress={carregarVendas}>
             <Ionicons name="alert-circle" size={20} color="#ff4444" />
-            <Text style={styles.errorText}>{errorMessage}</Text>
+            <Text style={styles.errorMessageText}>{errorMessage}</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -1539,7 +1569,11 @@ export default function RotaDetalhesScreen() {
           </View>
         ) : clientesFiltrados.length > 0 ? (
           <View style={styles.list}>
-            {clientesFiltrados.map((item, index) => renderCliente({ item, index }))}
+            {clientesFiltrados.map((item, index) => (
+              <React.Fragment key={item.clienteId || item.parcelamentoId || index}>
+                {renderCliente({ item, index })}
+              </React.Fragment>
+            ))}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
@@ -1708,10 +1742,10 @@ export default function RotaDetalhesScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonCancel, { marginTop: 8, width: '100%', flex: 0 }]}
+                style={styles.voltarRelatorioButton}
                 onPress={() => setShowRelatorioModal(false)}
               >
-                <Text style={styles.modalButtonTextCancel}>Cancelar</Text>
+                <Text style={styles.voltarRelatorioButtonText}>Voltar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1932,7 +1966,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
-  errorContainer: {
+  errorMessageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#4a1a1a',
@@ -1942,7 +1976,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ff4444',
   },
-  errorText: {
+  errorMessageText: {
     color: '#ff6666',
     fontSize: 14,
     marginLeft: 8,
@@ -2310,5 +2344,120 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 13,
     lineHeight: 18,
+  },
+  voltarRelatorioButton: {
+    width: '100%',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#333333',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    marginTop: 16,
+  },
+  voltarRelatorioButtonText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  // Estilos do Progresso em Tempo Real
+  progressContainer: {
+    backgroundColor: '#1a2a3a',
+    padding: 16,
+    margin: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2a4a6a',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  progressMessage: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 12,
+  },
+  progressPercentage: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  progressBarBackground: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#0a1a2a',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 4,
+  },
+  progressCount: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  waitingAsaasContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2a4a6a',
+    gap: 8,
+  },
+  waitingAsaasText: {
+    color: '#FFA500',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  completeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a3a1a',
+    padding: 16,
+    margin: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    gap: 12,
+  },
+  completeText: {
+    flex: 1,
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3a1a1a',
+    padding: 16,
+    margin: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ff4444',
+    gap: 12,
+  },
+  errorText: {
+    flex: 1,
+    color: '#ff4444',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

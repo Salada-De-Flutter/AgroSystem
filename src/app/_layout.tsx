@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider } from '../contexts/AuthContext';
 
 export default function RootLayout() {
@@ -29,53 +30,55 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AuthProvider>
-      <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-        <StatusBar style="light" backgroundColor="#1a1a1a" translucent={false} />
-        <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#1a1a1a' },
-          animation: 'fade',
-          animationDuration: 200,
-          navigationBarColor: '#1a1a1a',
-          statusBarBackgroundColor: '#1a1a1a',
-        }}
-      >
-        <Stack.Screen 
-          name="index" 
-          options={{
-            animation: 'fade',
-            animationDuration: 200,
-            contentStyle: { backgroundColor: '#1a1a1a' },
-          }}
-        />
-        <Stack.Screen 
-          name="auth/login" 
-          options={{
-            animation: 'fade',
-            animationDuration: 200,
-            contentStyle: { backgroundColor: '#1a1a1a' },
-          }}
-        />
-        <Stack.Screen 
-          name="auth/register" 
-          options={{
-            animation: 'fade',
-            animationDuration: 200,
-            contentStyle: { backgroundColor: '#1a1a1a' },
-          }}
-        />
-        <Stack.Screen 
-          name="(app)/home" 
-          options={{
-            animation: 'fade',
-            animationDuration: 200,
-            contentStyle: { backgroundColor: '#1a1a1a' },
-          }}
-        />
-        </Stack>
-      </View>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#1a1a1a' }} edges={["bottom","left","right"]}>
+          <StatusBar style="light" backgroundColor="#1a1a1a" translucent={false} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#1a1a1a' },
+              animation: 'fade',
+              animationDuration: 200,
+              navigationBarColor: '#1a1a1a',
+              statusBarBackgroundColor: '#1a1a1a',
+            }}
+          >
+            <Stack.Screen 
+              name="index" 
+              options={{
+                animation: 'fade',
+                animationDuration: 200,
+                contentStyle: { backgroundColor: '#1a1a1a' },
+              }}
+            />
+            <Stack.Screen 
+              name="auth/login" 
+              options={{
+                animation: 'fade',
+                animationDuration: 200,
+                contentStyle: { backgroundColor: '#1a1a1a' },
+              }}
+            />
+            <Stack.Screen 
+              name="auth/register" 
+              options={{
+                animation: 'fade',
+                animationDuration: 200,
+                contentStyle: { backgroundColor: '#1a1a1a' },
+              }}
+            />
+            <Stack.Screen 
+              name="(app)/home" 
+              options={{
+                animation: 'fade',
+                animationDuration: 200,
+                contentStyle: { backgroundColor: '#1a1a1a' },
+              }}
+            />
+          </Stack>
+        </SafeAreaView>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

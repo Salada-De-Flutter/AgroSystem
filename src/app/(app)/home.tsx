@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function HomeScreen() {
@@ -35,17 +36,13 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Olá,</Text>
           <Text style={styles.userName}>{usuario?.nome || 'Usuário'}</Text>
         </View>
-        
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#ff4444" />
-        </TouchableOpacity>
       </View>
 
-      {/* Menu de Opções */}
+      {/* Conteúdo principal */}
       <View style={styles.content}>
         <Text style={styles.sectionTitle}>Menu Principal</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.menuItem}
           onPress={() => router.push('/(app)/rotas/criar')}
         >
@@ -59,7 +56,7 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={24} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.menuItem}
           onPress={() => router.push('/(app)/vendedores/criar')}
         >
@@ -73,7 +70,7 @@ export default function HomeScreen() {
           <Ionicons name="chevron-forward" size={24} color="#666" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.menuItem}
           onPress={() => router.push('/(app)/relatorios')}
         >
@@ -85,6 +82,22 @@ export default function HomeScreen() {
             <Text style={styles.menuSubtitle}>Visualizar relatório de rotas</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Menu Inferior */}
+      <View style={styles.bottomMenu}>
+        <TouchableOpacity style={styles.bottomMenuItem} onPress={() => {}}>
+          <Ionicons name="home-outline" size={24} color="#b0b0b0" />
+          <Text style={styles.bottomMenuLabel}>Início</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.bottomMenuItem} onPress={() => {}}>
+          <Ionicons name="settings-outline" size={24} color="#b0b0b0" />
+          <Text style={styles.bottomMenuLabel}>Config</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.bottomMenuItem} onPress={handleLogout} accessibilityLabel="Sair">
+          <Ionicons name="log-out-outline" size={24} color="#ff4444" />
+          <Text style={styles.bottomMenuLabel}>Sair</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -116,10 +129,27 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginTop: 4,
   },
-  logoutButton: {
-    padding: 10,
-    backgroundColor: '#3a2a2a',
-    borderRadius: 10,
+  // Removido logoutButton, agora no menu inferior
+  bottomMenu: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#222',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    // Removido position absolute para evitar sobreposição
+    height: 64,
+  },
+  bottomMenuItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomMenuLabel: {
+    fontSize: 12,
+    color: '#b0b0b0',
+    marginTop: 2,
   },
   content: {
     flex: 1,
