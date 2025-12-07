@@ -116,18 +116,16 @@ export default function RotaDetalhesScreen() {
     // Dados fictícios para teste
     const clientesTeste: ClienteProcessado[] = [
       {
-        nomeCliente: 'João Silva',
+        nomeCliente: 'Cliente Pago',
         clienteId: 'cliente-1',
         parcelamentoId: 'parc-1',
         status: 'Em Dia',
         expandido: false,
         parcelasPagas: {
-          quantidade: 3,
-          valor: 900.00,
+          quantidade: 1,
+          valor: 8000.00,
           parcelas: [
-            { valor: 300.00, dataVencimento: '2025-01-15' },
-            { valor: 300.00, dataVencimento: '2025-02-15' },
-            { valor: 300.00, dataVencimento: '2025-03-15' },
+            { valor: 8000.00, dataVencimento: '2025-01-15' }
           ]
         },
         parcelasVencidas: {
@@ -136,149 +134,35 @@ export default function RotaDetalhesScreen() {
           parcelas: []
         },
         parcelasAVencer: {
-          quantidade: 2,
-          valor: 600.00,
+          quantidade: 1,
+          valor: 5000.00,
           parcelas: [
-            { valor: 300.00, dataVencimento: '2025-12-15' },
-            { valor: 300.00, dataVencimento: '2026-01-15' },
+            { valor: 5000.00, dataVencimento: '2026-01-15' }
           ]
         }
       },
       {
-        nomeCliente: 'Maria Oliveira',
+        nomeCliente: 'Cliente Inadimplente',
         clienteId: 'cliente-2',
         parcelamentoId: 'parc-2',
         status: 'Inadimplente',
         expandido: false,
         parcelasPagas: {
+          quantidade: 0,
+          valor: 0,
+          parcelas: []
+        },
+        parcelasVencidas: {
           quantidade: 1,
-          valor: 250.00,
+          valor: 15000.00,
           parcelas: [
-            { valor: 250.00, dataVencimento: '2025-01-10' },
-          ]
-        },
-        parcelasVencidas: {
-          quantidade: 3,
-          valor: 750.00,
-          parcelas: [
-            { valor: 250.00, dataVencimento: '2025-02-10' },
-            { valor: 250.00, dataVencimento: '2025-03-10' },
-            { valor: 250.00, dataVencimento: '2025-04-10' },
+            { valor: 15000.00, dataVencimento: '2025-02-10' }
           ]
         },
         parcelasAVencer: {
-          quantidade: 4,
-          valor: 1000.00,
-          parcelas: [
-            { valor: 250.00, dataVencimento: '2025-12-10' },
-            { valor: 250.00, dataVencimento: '2026-01-10' },
-            { valor: 250.00, dataVencimento: '2026-02-10' },
-            { valor: 250.00, dataVencimento: '2026-03-10' },
-          ]
-        }
-      },
-      {
-        nomeCliente: 'Pedro Santos',
-        clienteId: 'cliente-3',
-        parcelamentoId: 'parc-3',
-        status: 'A Vencer',
-        expandido: false,
-        parcelasPagas: {
-          quantidade: 5,
-          valor: 2500.00,
-          parcelas: [
-            { valor: 500.00, dataVencimento: '2025-01-20' },
-            { valor: 500.00, dataVencimento: '2025-02-20' },
-            { valor: 500.00, dataVencimento: '2025-03-20' },
-            { valor: 500.00, dataVencimento: '2025-04-20' },
-            { valor: 500.00, dataVencimento: '2025-05-20' },
-          ]
-        },
-        parcelasVencidas: {
           quantidade: 0,
           valor: 0,
           parcelas: []
-        },
-        parcelasAVencer: {
-          quantidade: 7,
-          valor: 3500.00,
-          parcelas: [
-            { valor: 500.00, dataVencimento: '2025-12-20' },
-            { valor: 500.00, dataVencimento: '2026-01-20' },
-            { valor: 500.00, dataVencimento: '2026-02-20' },
-            { valor: 500.00, dataVencimento: '2026-03-20' },
-            { valor: 500.00, dataVencimento: '2026-04-20' },
-            { valor: 500.00, dataVencimento: '2026-05-20' },
-            { valor: 500.00, dataVencimento: '2026-06-20' },
-          ]
-        }
-      },
-      {
-        nomeCliente: 'Ana Costa',
-        clienteId: 'cliente-4',
-        parcelamentoId: 'parc-4',
-        status: 'Inadimplente',
-        expandido: false,
-        parcelasPagas: {
-          quantidade: 0,
-          valor: 0,
-          parcelas: []
-        },
-        parcelasVencidas: {
-          quantidade: 5,
-          valor: 1250.00,
-          parcelas: [
-            { valor: 250.00, dataVencimento: '2025-01-05' },
-            { valor: 250.00, dataVencimento: '2025-02-05' },
-            { valor: 250.00, dataVencimento: '2025-03-05' },
-            { valor: 250.00, dataVencimento: '2025-04-05' },
-            { valor: 250.00, dataVencimento: '2025-05-05' },
-          ]
-        },
-        parcelasAVencer: {
-          quantidade: 3,
-          valor: 750.00,
-          parcelas: [
-            { valor: 250.00, dataVencimento: '2025-12-05' },
-            { valor: 250.00, dataVencimento: '2026-01-05' },
-            { valor: 250.00, dataVencimento: '2026-02-05' },
-          ]
-        }
-      },
-      {
-        nomeCliente: 'Carlos Ferreira',
-        clienteId: 'cliente-5',
-        parcelamentoId: 'parc-5',
-        status: 'Em Dia',
-        expandido: false,
-        parcelasPagas: {
-          quantidade: 8,
-          valor: 4000.00,
-          parcelas: [
-            { valor: 500.00, dataVencimento: '2025-01-25' },
-            { valor: 500.00, dataVencimento: '2025-02-25' },
-            { valor: 500.00, dataVencimento: '2025-03-25' },
-            { valor: 500.00, dataVencimento: '2025-04-25' },
-            { valor: 500.00, dataVencimento: '2025-05-25' },
-            { valor: 500.00, dataVencimento: '2025-06-25' },
-            { valor: 500.00, dataVencimento: '2025-07-25' },
-            { valor: 500.00, dataVencimento: '2025-08-25' },
-          ]
-        },
-        parcelasVencidas: {
-          quantidade: 0,
-          valor: 0,
-          parcelas: []
-        },
-        parcelasAVencer: {
-          quantidade: 4,
-          valor: 2000.00,
-          parcelas: [
-            { valor: 500.00, dataVencimento: '2025-12-25' },
-            { valor: 500.00, dataVencimento: '2026-01-25' },
-            { valor: 500.00, dataVencimento: '2026-02-25' },
-            { valor: 500.00, dataVencimento: '2026-03-25' },
-          ]
         }
       }
     ];
@@ -301,8 +185,9 @@ export default function RotaDetalhesScreen() {
       }
     });
 
-    const totalGeral = valRecebido + valVencido + valAVencer;
-    const taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+  // Taxa de inadimplência = valor vencido / (valor recebido + valor vencido) * 100
+  const totalBase = valRecebido + valVencido;
+  const taxaInad = totalBase > 0 ? (valVencido / totalBase) * 100 : 0;
 
     setTotalEmDia(emDia);
     setTotalInadimplente(inadimplente);
@@ -481,9 +366,9 @@ export default function RotaDetalhesScreen() {
             }
           });
 
-          // Calcular taxa de inadimplência
-          const totalGeral = valRecebido + valVencido + valAVencer;
-          const taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+          // Calcular taxa de inadimplência (padrão: vencido / (recebido + vencido) * 100)
+          const totalBase = valRecebido + valVencido;
+          const taxaInad = totalBase > 0 ? (valVencido / totalBase) * 100 : 0;
 
           setTotalEmDia(emDia);
           setTotalInadimplente(inadimplente);
@@ -666,12 +551,12 @@ export default function RotaDetalhesScreen() {
       // Para relatórios específicos, calcular taxa baseada em TODOS os clientes (não filtrados)
       let taxaInad = 0;
       if (tipoRelatorio === 'completo') {
-        const totalGeral = valRecebido + valVencido + valAVencer;
-        taxaInad = totalGeral > 0 ? (valVencido / totalGeral) * 100 : 0;
+        const totalBase = valRecebido + valVencido;
+        taxaInad = totalBase > 0 ? (valVencido / totalBase) * 100 : 0;
       } else if (tipoRelatorio === 'inadimplente') {
         // Para relatório de inadimplentes, usar dados globais
-        const totalGeralGlobal = valorRecebido + valorVencido + valorAVencer;
-        taxaInad = totalGeralGlobal > 0 ? (valorVencido / totalGeralGlobal) * 100 : 0;
+        const totalBaseGlobal = valorRecebido + valorVencido;
+        taxaInad = totalBaseGlobal > 0 ? (valorVencido / totalBaseGlobal) * 100 : 0;
       }
       
       const totalGeral = valRecebido + valVencido + valAVencer;
@@ -996,7 +881,7 @@ export default function RotaDetalhesScreen() {
               ${tipoRelatorio === 'completo' || tipoRelatorio === 'inadimplente' ? `
               <div class="total-item">
                 <h4>Taxa de Inadimplência</h4>
-                <div class="valor" style="color: ${taxaInad > 20 ? '#ff4444' : taxaInad > 10 ? '#FFA500' : '#4CAF50'}">${taxaInad.toFixed(1)}%</div>
+                <div class="valor" style="color: ${taxaInad > 20 ? '#ff4444' : taxaInad > 10 ? '#FFA500' : '#4CAF50'}">${taxaInad.toFixed(3)}%</div>
               </div>
               ` : ''}
             </div>
@@ -1294,21 +1179,80 @@ export default function RotaDetalhesScreen() {
               <TouchableOpacity
               style={[styles.removerClienteButton, { backgroundColor: '#25D366', flexDirection: 'row', alignItems: 'center', marginBottom: 8 }]}
               onPress={() => {
-                const numero = item.celular ? item.celular.replace(/\D/g, '') : '';
+                // Remover todos os caracteres não numéricos do celular
+                let numero = item.celular ? item.celular.replace(/\D/g, '') : '';
+                
                 if (!numero) {
                   Alert.alert('Erro', 'Cliente sem número de celular cadastrado.');
                   return;
                 }
-                const mensagem = encodeURIComponent(`Olá ${item.nomeCliente}, tudo bem?\n\nEstamos entrando em contato para lembrar sobre suas parcelas da rota ${rotaNome}. Caso tenha dúvidas ou precise de ajuda, estamos à disposição!`);
-                const url = `https://wa.me/${numero}?text=${mensagem}`;
-                // Abrir link no navegador (Web ou App)
-                if (typeof window !== 'undefined' && typeof window.open === 'function') {
-                  window.open(url, '_blank');
-                } else {
-                  Linking.openURL(url).catch(() => {
-                    Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
-                  });
+                
+                // Adicionar código do país (+55) se não tiver
+                if (!numero.startsWith('55')) {
+                  numero = '55' + numero;
                 }
+                
+                // Validar formato do número brasileiro (55 + DDD + número)
+                // Deve ter 13 dígitos (55 + 2 DDD + 9 dígitos) ou 12 dígitos (55 + 2 DDD + 8 dígitos para fixo)
+                if (numero.length < 12 || numero.length > 13) {
+                  Alert.alert(
+                    'Número inválido', 
+                    `O número ${item.celular} parece estar incompleto ou incorreto. Verifique o cadastro do cliente.`
+                  );
+                  return;
+                }
+                
+                // Construir mensagem de cobrança focada em inadimplência
+                let mensagem = `Olá *${item.nomeCliente}*, tudo bem?\n\n`;
+                mensagem += `Aqui é da *AgroVec do Brasil*. Estamos entrando em contato sobre a compra realizada com o vendedor *${vendedorDaRota}*.\n\n`;
+                
+                // Verificar se há parcelas vencidas
+                if (item.parcelasVencidas.quantidade > 0) {
+                  mensagem += `⚠️ *AVISO DE COBRANÇA*\n\n`;
+                  mensagem += `Identificamos pendências em seu nome no valor total de *${formatarValor(item.parcelasVencidas.valor)}*.\n\n`;
+                  
+                  mensagem += `*Detalhamento das Parcelas Vencidas:*\n`;
+                  item.parcelasVencidas.parcelas.forEach((parcela, idx) => {
+                    const diasAtraso = Math.floor((new Date().getTime() - new Date(parcela.dataVencimento).getTime()) / (1000 * 60 * 60 * 24));
+                    mensagem += `${idx + 1}. ${formatarValor(parcela.valor)} - Vencida em ${formatarData(parcela.dataVencimento)} _(${diasAtraso} dias de atraso)_\n`;
+                  });
+                  mensagem += `\n`;
+                  
+                  mensagem += `*Solicitamos a regularização urgente do pagamento.*\n\n`;
+                  mensagem += `Entre em contato conosco para regularizar sua situação ou esclarecer dúvidas.`;
+                } else {
+                  // Caso não tenha parcelas vencidas (mensagem de lembrete)
+                  mensagem += `Estamos entrando em contato sobre suas parcelas.\n\n`;
+                  
+                  if (item.parcelasAVencer.quantidade > 0) {
+                    mensagem += `*Próximas Parcelas:*\n`;
+                    const proximasParcelas = item.parcelasAVencer.parcelas.slice(0, 3);
+                    proximasParcelas.forEach((parcela, idx) => {
+                      mensagem += `${idx + 1}. ${formatarValor(parcela.valor)} - Vencimento: ${formatarData(parcela.dataVencimento)}\n`;
+                    });
+                    
+                    if (item.parcelasAVencer.quantidade > 3) {
+                      mensagem += `... e mais ${item.parcelasAVencer.quantidade - 3} parcela(s)\n`;
+                    }
+                    mensagem += `\n`;
+                  }
+                  
+                  mensagem += `Mantenha seus pagamentos em dia. Caso tenha dúvidas, estamos à disposição!`;
+                }
+                
+                const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+                
+                console.log('[WhatsApp] Abrindo URL:', url);
+                console.log('[WhatsApp] Número formatado:', numero);
+                
+                // Abrir link do WhatsApp
+                Linking.openURL(url).catch((error) => {
+                  console.error('[WhatsApp] Erro ao abrir:', error);
+                  Alert.alert(
+                    'Erro', 
+                    'Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.'
+                  );
+                });
               }}
               activeOpacity={0.7}
               disabled={removendo}
@@ -1436,8 +1380,8 @@ export default function RotaDetalhesScreen() {
               
               <View style={styles.metricaItem}>
                 <Text style={styles.metricaLabel}>Taxa de Inadimplência</Text>
-                <Text style={[styles.metricaValor, { color: taxaInadimplencia > 20 ? '#ff4444' : taxaInadimplencia > 10 ? '#FFA500' : '#4CAF50' }]}>
-                  {taxaInadimplencia.toFixed(1)}%
+                <Text style={[styles.metricaValor, { color: taxaInadimplencia > 20 ? '#ff4444' : taxaInadimplencia > 10 ? '#FFA500' : '#4CAF50' }]}> 
+                  {taxaInadimplencia.toFixed(5)}%
                 </Text>
               </View>
             </View>
